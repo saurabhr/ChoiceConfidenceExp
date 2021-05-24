@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        
+        <script src="jspsych/jspsych.js"></script>
+        <!--script src="svg.js/svg.js"></script-->
+        <!--script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/2.6.3/svg.min.js"></script-->
+        <script src="jspsych/plugins/jspsych-instructions.js"></script>
+        <script src="jspsych/plugins/jspsych-virtual-chinrest.js"></script>
+        <script src="jspsych/plugins/jspsych-fullscreen.js"></script>
+        <script src="jspsych/plugins/jspsych-rdk.js"></script>
+        <!--https://www.jspsych.org/plugins/jspsych-rdk/-->
+        <script src="jspsych/plugins/jspsych-html-keyboard-response.js"></script>
+        <script src="jspsych/plugins/jspsych-canvas-keyboard-response.js"></script>
+        <script src="jspsych/plugins/jspsych-image-keyboard-response.js"></script>
+        <link href = "jspsych/css/jspsych.css" rel = "stylesheet" type = "text/css"></link>
+
+    </head>
+
+    <body></body>
+    <script src = "chinrest.js"></script>
+    <script src = "iti.js"></script>
+    <script src = "instructions.js"></script>
+
+    <script>
+    /* TODO
+    1) Work on instructions?.
+    2) Add consent 
+    3) Add intergration for online data collection.
+    4) Subject randomization 
+    6) Make it online.
+    8) Fixation and rondom dot centering.
+    
+    
+ 
+    */
+
+    /*subject specific changes */
+    var sidgrp = 0; // Subject ID group for counterbalancing parameters; can be 0 or 1 to counterbalance some parameters. TODO: make this dynamic
+
+    /*repetions of practice trial per coherence*/
+    const pNTrials = 2;
+
+    /*repetions of trial for No-Choice block per color and trial per coherence per direction*/
+    const ncNTrials = 10; 
+
+    /*repetions of trial for Choice block per congruent/in-congruent and per coherence per direction*/
+    const cNTrials = 1; 
+
+    /*variables for rdk*/
+
+    const coherence = [0,0.20,0.4,0.6,0.8,1];
+    const n_dots = 200;
+    const directions = [0,180];
+    //var n_sets
+    const dot_size = 2; // aka dot_radius; in pixels
+    //var dot_life
+    const aperture_width = 400; //in pixels
+    const aperture_type = 1;
+    const dot_color = ['blue','yellow']; //for no-choice block and choice block
+    const rdk_resp_keys = ['k','l','s','d'];
+
+    /* variables for trial*/
+
+    const correct_reponses = {0:['k','l'],180:['s','d']};
+    const confidence_level = {0:{'k':'low','d':'low','l':'high','s':'high'},
+                            1:{'k':'high','d':'high','l':'low','s':'low'}}; //0 or 1 based on counterblancing
+    const trial_type = ['congruent','incongruent']; //for choice block
+
+    const free_choice_keys = ['c','m'];
+    const free_choice = {'c':'yellow','m':'blue'}; //for choice block key C mapped to yellow color; key M mapped to blue color
+    const outcomes = {'congruent':free_choice, 'incongruent':{'m':'yellow','c':'blue'}};
+    const level_bar_width = 10; // in pixels
+    var level_bar_height = {'c': 4, 'm': 4}; // to record how many times each color has been chosen across trials
+
+    const level_bar_position_x = {'c':150,'m':540}; // position of each level bar on x-axis
+    const level_bar_position_y = {'c':0,'m':0}; // position of each level bar on y-axis
+
+
+    var current_choice = ""; // temporary variable to store the color in current trial to upade rdk-color used in choice block 
+    var current_counts = {'c':0,'m':0}
+    var choiceBlock = 1 // chioce block n.. n<=2
+    var n_prac_corr = 0 //number of correct practice trials
+    var null_resposne = false // instantaneous null response in practice trials
+    var prac_threshold = 0.9 // threshold accuracy level for practice trials
+    var prac_acc = 0 // accuracy in practice trial
+    var continue_practice = false // instantenous counter for whether more practice is required or not
+
+    //--------------------INITIALIZE TRIALS--------------------------------------------------------------------
+    /* unique trials parameters for practice */
+    var trial_list_practice_block = []
+        for (i = 0; i < directions.length; i++) {
+            for (j = 0; j < coherence.length; j++) {
+
+                trial_list_practice_block.push({'coherence':coherence[j],
+                'direction':directions[i],'dot_color':'white','block_type': 'practice',
+                'corrResp':correct_reponses[directions[i]]})
+
+            }
+        }
+
+    trial_list_practice_block = jsPsych.randomization.repeat(trial_list_practice_block ,pNTrials)
+
+    /* unique trials parameters for no-choice block */
+    var trial_list_no_choice_block = [];
+    for (i = 0; i < directions.length; i++) {
+        for (j = 0; j < coherence.length; j++) {
+            for(k = 0; k < dot_color.length; k++) {
+
+                trial_list_no_choice_block.push({'coherence':coherence[j],
+                'direction':directions[i],'dot_color':dot_color[k], 'block_type': 'no-choice block',
+                'corrResp':correct_reponses[directions[i]]
+                })
+
+            }
+        }
+    }
+    trial_list_no_choice_block = jsPsych.randomization.repeat(trial_list_no_choice_block ,ncNTrials)
+
+    /* unique trials parameters for choice block */
+    var trial_list_choice_block = [];
+    for (i = 0; i < directions.length; i++) {
+        for (j = 0; j < coherence.length; j++) {
+            for(k = 0; k < trial_type.length; k++) {
+
+                trial_list_choice_block.push({'coherence':coherence[j],
+                'direction':directions[i],'choiceCongruent':trial_type[k], 'block_type': 'choice block',
+                'corrResp':correct_reponses[directions[i]]
+                })
+
+            }
+        }
+    }
+
+    trial_list_choice_block = jsPsych.randomization.repeat(trial_list_choice_block ,cNTrials)
+
+    /* shuffle trial lists */
+    strial_list_practice_block = jsPsych.randomization.shuffle(trial_list_practice_block)
+    strial_list_no_choice_block = jsPsych.randomization.shuffle(trial_list_no_choice_block)
+    strial_list_choice_block1 = jsPsych.randomization.shuffle(trial_list_choice_block)
+    strial_list_choice_block2 = jsPsych.randomization.shuffle(trial_list_choice_block)
+
+    /* initialize iti for each trial */
+    function set_iti(iti, trials){
+        
+        i = 0
+        while (i< trials.length) {
+            trials[i]['delay'] = iti[i]*1000
+            i+=1
+        }
+        return trials
+    } 
+
+    strial_list_practice_block = set_iti(practice_iti,strial_list_practice_block)
+    strial_list_no_choice_block = set_iti(no_choice_block_iti,strial_list_no_choice_block)
+    strial_list_choice_block1 = set_iti(choice_block_1iti,strial_list_choice_block1)
+    strial_list_choice_block2 = set_iti(choice_block_2iti,strial_list_choice_block2)
+    
+    //----------------------------INITIALIZE STIM-------------------------------------------------------------
+    /* set background and foreground color */
+    function set_html_style() {
+        document.body.style.backgroundColor = "rgb(128,128,128)"
+        document.body.style.color = 'white'
+    } 
+
+    /* welcome message */
+    var welcome = {
+        type: 'instructions',
+        on_start: set_html_style,
+        pages: [openInst
+                    ],
+        show_clickable_nav: true
+    }
+    /* practice instruction message*/
+    var instruction_practice = {
+        type: 'html-keyboard-response',
+        on_start: set_html_style,
+        stimulus: pInst, 
+        prompt: 'press C key or M key to start trial',
+        choices: free_choice_keys
+
+    } 
+
+    /* keyboard response mapping image without choice*/
+    var key_image_no_choice = {
+        type: 'image-keyboard-response',
+        on_start: set_html_style,
+        stimulus: 'img/keyMappingWithoutChoice.png', 
+        prompt: 'press C key or M key to start trial',
+        choices: free_choice_keys
+
+    }
+
+    /* keyboard response mapping image without choice*/
+    var key_image_choice = {
+        type: 'image-keyboard-response',
+        on_start: set_html_style,
+        stimulus: 'img/keyMappingWithChoice.png', 
+        prompt: 'press C key or M key to start trial',
+        choices: free_choice_keys
+
+    }
+
+    /* no choice block instruction message*/
+    var instruction_no_choice = {
+        type: 'html-keyboard-response',
+        on_start: set_html_style,
+        stimulus: e1Inst, 
+        prompt: 'press C key or M key to start trial',
+        choices: free_choice_keys
+
+    } 
+    /* no choice block next trial instruction message*/
+    var next_trial = {
+        type: 'html-keyboard-response',
+        on_start: set_html_style,
+        stimulus:" ",
+        prompt: 'press C key or M key to start trial', 
+        choices: free_choice_keys
+
+    } 
+
+
+    /* choice block instruction message*/
+    var instruction_choice = {
+        type: 'html-keyboard-response',
+        on_start: set_html_style,
+        stimulus: e2Inst, 
+        prompt: 'press C key or M key to start trial',
+        choices: free_choice_keys
+
+    } 
+
+    /* fixation */
+    var fixation = {
+        type: 'html-keyboard-response',
+        on_start: set_html_style,
+        //prompt: 'Fixate on Cross',
+        stimulus: '<span style= "font-size:40px;">+</span>', //fixation size
+        choices: jsPsych.NO_KEYS,
+        trial_duration: jsPsych.timelineVariable('delay')
+    }
+
+    /* intialize RDK for practice block */
+    var practice_rdk = {
+        type: "rdk",
+        
+        dot_color: jsPsych.timelineVariable('dot_color'),
+        choices: rdk_resp_keys,
+        correct_choice: jsPsych.timelineVariable('corrResp'),
+        trial_duration: 1000, //TODO
+        number_of_dots: n_dots,
+        coherent_direction: jsPsych.timelineVariable('direction'),
+        coherence: jsPsych.timelineVariable('coherence'),
+        dot_radius: dot_size,
+        trial_part: 'practice_rdk',
+        reinsert_type: 1,
+        // dot_life = dot_life, TODO
+        aperture_width: aperture_width,
+        aperture_type: aperture_type,
+        data: {block_type: jsPsych.timelineVariable('block_type')},
+        on_finish: function(data){
+
+            data.correct = data.correct_choice.includes(data.response)
+            if (data.correct == true){
+                n_prac_corr = n_prac_corr+1
+            }
+            if (data.response == -1){
+                data.confidence = -1
+                null_resposne = true
+            }
+            else{
+                data.confidence = confidence_level[sidgrp][data.response]
+                
+            }
+        }
+
+    }
+
+
+    /* intialize RDK for no_choice_block */
+    var no_choice_block_rdk = {
+        type: "rdk",
+        dot_color: jsPsych.timelineVariable('dot_color'),
+        choices: rdk_resp_keys,
+        correct_choice: jsPsych.timelineVariable('corrResp'),
+        trial_duration: 1000, //TODO
+        number_of_dots: n_dots,
+        coherent_direction: jsPsych.timelineVariable('direction'),
+        coherence: jsPsych.timelineVariable('coherence'),
+        dot_radius: dot_size,
+        reinsert_type: 1,
+        // dot_life = dot_life, TODO
+        aperture_width: aperture_width,
+        aperture_type: aperture_type,
+        //trial
+        data: {block_type: jsPsych.timelineVariable('block_type')},
+        on_finish: function(data){
+
+            data.correct = data.correct_choice.includes(data.response)
+            if (data.response == -1){
+                data.confidence = -1
+            }
+            else{
+                data.confidence = confidence_level[sidgrp][data.response]
+            }
+        }
+
+    }
+
+
+    /* intialize RDK for choice_block */
+    var choice_block_rdk = {
+        type: "rdk",
+        on_start: function(trial){
+            trial.dot_color = outcomes[jsPsych.timelineVariable('choiceCongruent')][current_choice]
+            console.log(current_choice,'choosen outcome:',free_choice[current_choice],'condition:',jsPsych.timelineVariable('choiceCongruent'),'outcome occured:',trial.dot_color);
+            
+        },
+        choices: rdk_resp_keys,
+        correct_choice: jsPsych.timelineVariable('corrResp'),
+        trial_duration: 1000, //TODO
+        number_of_dots: n_dots,
+        reinsert_type: 1,
+        coherent_direction: jsPsych.timelineVariable('direction'),
+        coherence: jsPsych.timelineVariable('coherence'),
+        dot_radius: dot_size,
+        // dot_life = dot_life, TODO
+        aperture_width: aperture_width,
+        aperture_type: aperture_type,
+        data: {block_type: jsPsych.timelineVariable('block_type')},
+        on_finish: function(data){
+            data.choiceBlock = choiceBlock
+            data.correct = data.correct_choice.includes(data.response)
+
+            if (data.response == -1){
+                data.confidence = -1
+
+            }
+            else{
+                data.confidence = confidence_level[sidgrp][data.response]
+            }
+        }
+
+    }
+
+    /* intialize level bars for choice made by the user in choice block session */
+    function drawLevelBars(c){
+        var ctxLevelC = c.getContext('2d'); //object to indicate number of times C key option (yellow)
+        var ctxLevelM = c.getContext('2d'); //object to indicate number of times M key option (yellow)
+        
+        ctxLevelC.fillStyle = free_choice['c']
+        ctxLevelC.fillRect(level_bar_position_x['c'], level_bar_position_y['c'], level_bar_width, level_bar_height['c']);
+        ctxLevelM.fillStyle = free_choice['m']
+        ctxLevelM.fillRect(level_bar_position_x['m'], level_bar_position_y['m'], level_bar_width, level_bar_height['m']);
+        
+        ctxLevelC.beginPath();
+        ctxLevelM.beginPath();
+        
+        ctxLevelC.stroke();
+        ctxLevelM.stroke();
+    }
+    var level_bars = {
+        type: 'canvas-keyboard-response',
+        on_start: set_html_style,
+        stimulus: drawLevelBars,
+        prompt: '<p><span = style="font-weight:bold;">CHOOSE COLOR OF DOTS</span> <br> <span style="color:yellow;">C key for YELLOW</span> &emsp;&emsp; <span style="color:blue;">M key for BLUE</span><br> Choose <span = style="font-weight:bold;">Randomly</span> <br>Fixate on the Cross after keypress <br> Color bars indicate the number of times each color has been previously choosen</p>',
+        choices: free_choice_keys,
+        canvas_size: [500,700],
+        on_finish: function(data){
+            level_bar_height[data.response] += 2;
+            data.chosen = free_choice[data.response];
+            
+            current_counts[data.response]  = current_counts[data.response] + 1;
+            
+            data.count_m = current_counts['m'] 
+            data.count_c = current_counts['c'] 
+            
+            current_choice = data.response;
+            
+            console.log(level_bar_height,current_counts);
+            
+
+
+
+        }
+    }
+
+
+    /* initialize feedback */
+    var feedback_screen = {
+        type: 'html-keyboard-response',
+        on_start: set_html_style,
+        prompt: '<p style="color: black;font-size: 48px;">Press key C or M to start next trial</p>',
+        stimulus: function(){
+            var feedback_text = '<p style="color: red;font-size: 80px;">Incorrect</p>';
+                
+            var last_trial_accuracy = jsPsych.data.getLastTrialData().values()[0].correct; //TODO
+                if (last_trial_accuracy == true){
+                    feedback_text = '<p style="color: green;font-size: 80px;">Correct</p>';
+                    
+                }
+                if (null_resposne==true){
+                    null_resposne = false
+                    feedback_text = '<p style="font-size: 80px;">FAILED TO RESPOND</p>'
+                }
+                
+            return feedback_text
+        },
+        choices: free_choice_keys,
+        
+    }
+
+
+    /* initialize stim to display accuracy */
+    var feedback_acc_practice = {
+        type: 'html-keyboard-response',
+        on_start: set_html_style,
+        stimulus: '<p styple="color: black;font-size: 100px;">To many incorrect response. <br>Repeat instructions and practice</p>',
+        prompt: '<p style="color: black;font-size: 48px;">Press key C or M to start next trial</p>',
+        choices:free_choice_keys
+    }
+
+    /*exp end prompt*/
+    var thankyou = {
+    type: 'html-keyboard-response',
+    stimulus: '<p style="font-size: 48px;">THANK YOU</p>',
+    choices: jsPsych.NO_KEYS,
+    trial_duration: 1000,
+    };
+
+    /*block break prompt*/
+    var choice_block_interval = {
+    type: 'html-keyboard-response',
+    stimulus: '<p style="font-size: 48px;">BREAK. Press C or M to Proceed to next block.</p>',
+    choices: ['c','m'],
+    
+    }
+
+    //------------------INITIALIZE PROCEDURE---------------------------------------------------
+    /* create practice procedure with the condition of minimum accuracy*/
+    var practice_block_procedure = {
+        timeline: [fixation, practice_rdk,feedback_screen],
+        timeline_variables: strial_list_practice_block,
+        randomize_order: true,
+        
+    }
+    /* practice failure procedure*/
+    var fb_acc_prac = {
+        timeline: [feedback_acc_practice],
+        
+        conditional_function: function(){
+            prac_acc = n_prac_corr/strial_list_practice_block.length
+            console.log(prac_acc)
+            if (prac_acc < prac_threshold){
+                continue_practice = true
+                return true
+            }else{
+                continue_practice = false
+                return false
+            }
+
+        }
+    }
+
+    /*practice loop*/
+    var loop_practice = {
+        timeline: [instruction_practice,key_image_no_choice,practice_block_procedure,fb_acc_prac],
+        on_timeline_start:function(){
+            n_prac_corr = 0
+        },
+        loop_function: function(){
+            if (continue_practice == true){
+                return true
+            }else{
+                return false}
+            
+        }
+    }
+
+    /* create no-choice block procedure */
+    var no_choice_block_procedure = {
+        
+        timeline: [fixation, no_choice_block_rdk,next_trial],
+        timeline_variables: strial_list_no_choice_block,
+        randomize_order: true
+    }
+
+    /* create choice block 1 procedure */
+    var choice_block_1_procedure = {
+        timeline: [level_bars, fixation, choice_block_rdk],
+        timeline_variables: strial_list_choice_block1,
+        on_timeline_start:function(data){
+            data.NchoiceBlock = choiceBlock
+        },
+        randomize_order: true,
+        on_timeline_finish: function() {
+        choiceBlock = choiceBlock + 1;
+        level_bar_height = {'c': 4, 'm': 4};
+         }
+    }
+
+    /* create choice block 2 procedure */
+    var choice_block_2_procedure = {
+        timeline: [level_bars, fixation, choice_block_rdk],
+        timeline_variables: strial_list_choice_block2,
+        on_timeline_start:function(data){
+            data.NchoiceBlock = choiceBlock
+        },
+        randomize_order: true
+    }
+
+//-----------INITIALIZE TIMELINE----------------------------------------------
+
+    /* create timeline */
+    var timeline = []
+    /*timeline.push({ //enter fullscreen
+                    type: 'fullscreen',
+                    fullscreen_mode: true
+                }); */
+    timeline.push(welcome);
+    //timeline.push(cm_resize);
+    //timeline.push(validation_trial);
+    timeline.push(loop_practice)
+    timeline.push(instruction_no_choice)
+    timeline.push(key_image_no_choice)
+    timeline.push(no_choice_block_procedure)
+    timeline.push(instruction_choice)
+    timeline.push(key_image_choice)
+    timeline.push(choice_block_1_procedure)
+    timeline.push(choice_block_interval)
+    timeline.push(choice_block_2_procedure)
+    timeline.push(thankyou)
+    /*timeline.push({ //exit fullscreen
+                    type: 'fullscreen',
+                    fullscreen_mode: false
+                }); */
+
+//------------INITIALIZE INIT-----------------------------------------------------
+    jsPsych.init({
+            timeline: timeline,
+            //show_progress_bar: true,
+            on_finish: function() {
+                jsPsych.data.displayData();
+        }})
+    </script>
+
+</html> 
