@@ -30,7 +30,7 @@
     4) add subject ID
     4) Subject randomization 
     6) Make it online.
-    7) Fixation and rondom dot centering (temporarily fixed).
+    7) Fixation and rondom dot centering (temporarily fixed, browser dependent).
     8) Prolific Integration
     
     
@@ -47,11 +47,11 @@
     const ncNTrials = 10; 
 
     /*repetions of trial for Choice block per congruent/in-congruent and per coherence per direction*/
-    const cNTrials = 1; 
+    const cNTrials = 10; 
 
     /*variables for rdk*/
 
-    const coherence = [0,0.20,0.4,0.6,0.8,1];
+    const coherence = [0.1,0.2167,0.3333,0.45,0.6833,0.8];
     const n_dots = 200;
     const directions = [0,180];
     //var n_sets
@@ -157,7 +157,7 @@
     strial_list_no_choice_block = set_iti(no_choice_block_iti,strial_list_no_choice_block)
     strial_list_choice_block1 = set_iti(choice_block_1iti,strial_list_choice_block1)
     strial_list_choice_block2 = set_iti(choice_block_2iti,strial_list_choice_block2)
-    
+    console.log(strial_list_practice_block.length,strial_list_no_choice_block.length,)
     //----------------------------INITIALIZE STIM-------------------------------------------------------------
     /* set background and foreground color */
     function set_html_style() {
@@ -419,7 +419,7 @@
         type: 'html-keyboard-response',
         on_start: set_html_style,
         stimulus: '<p styple="color: black;font-size: 100px;">To many incorrect response. <br>Repeat instructions and practice</p>',
-        prompt: '<p style="color: black;font-size: 48px;">Press key C or M to start next trial</p>',
+        prompt: '<p style="color: black;">Press key C or M to start next trial</p>',
         choices:free_choice_keys
     }
 
@@ -520,9 +520,9 @@
                     type: 'fullscreen',
                     fullscreen_mode: true
                 }); */
-    timeline.push(welcome);
+    //timeline.push(welcome);
     //timeline.push(cm_resize);
-    //timeline.push(validation_trial);
+    timeline.push(validation_trial);
     timeline.push(loop_practice)
     timeline.push(instruction_no_choice)
     timeline.push(key_image_no_choice)
