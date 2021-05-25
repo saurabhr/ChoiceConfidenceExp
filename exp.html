@@ -4,7 +4,7 @@
         
         <script src="jspsych/jspsych.js"></script>
         <!--script src="svg.js/svg.js"></script-->
-        <!--script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/2.6.3/svg.min.js"></script-->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/2.6.3/svg.min.js"></script>
         <script src="jspsych/plugins/jspsych-instructions.js"></script>
         <script src="jspsych/plugins/jspsych-virtual-chinrest.js"></script>
         <script src="jspsych/plugins/jspsych-fullscreen.js"></script>
@@ -167,6 +167,7 @@
 
     /* welcome message */
     var welcome = {
+        data:{screen_id:"welcome"},
         type: 'instructions',
         on_start: set_html_style,
         pages: [openInst
@@ -175,6 +176,7 @@
     }
     /* practice instruction message*/
     var instruction_practice = {
+        data:{screen_id:"inst_practice"},
         type: 'html-keyboard-response',
         on_start: set_html_style,
         stimulus: pInst, 
@@ -185,6 +187,7 @@
 
     /* keyboard response mapping image without choice*/
     var key_image_no_choice = {
+        data:{screen_id:"keys_image_withoutChoice"},
         type: 'image-keyboard-response',
         on_start: set_html_style,
         stimulus: 'img/keyMappingWithoutChoice.png', 
@@ -195,6 +198,7 @@
 
     /* keyboard response mapping image without choice*/
     var key_image_choice = {
+        data:{screen_id:"keys_image_withChoice"},
         type: 'image-keyboard-response',
         on_start: set_html_style,
         stimulus: 'img/keyMappingWithChoice.png', 
@@ -205,6 +209,7 @@
 
     /* no choice block instruction message*/
     var instruction_no_choice = {
+        data:{screen_id:"inst_no_choice"},
         type: 'html-keyboard-response',
         on_start: set_html_style,
         stimulus: e1Inst, 
@@ -214,6 +219,7 @@
     } 
     /* no choice block next trial instruction message*/
     var next_trial = {
+        data:{screen_id:"next_trial_prompt_no_choice"},
         type: 'html-keyboard-response',
         on_start: set_html_style,
         stimulus:" ",
@@ -225,6 +231,7 @@
 
     /* choice block instruction message*/
     var instruction_choice = {
+        data:{screen_id:"inst_choice"},
         type: 'html-keyboard-response',
         on_start: set_html_style,
         stimulus: e2Inst, 
@@ -235,6 +242,7 @@
 
     /* fixation */
     var fixation = {
+        data:{screen_id:"fixation"},
         type: 'html-keyboard-response',
         on_start: set_html_style,
         //prompt: 'Fixate on Cross',
@@ -245,6 +253,7 @@
 
     /* intialize RDK for practice block */
     var practice_rdk = {
+        data:{screen_id:"rdk_practice"},
         type: "rdk",
         
         dot_color: jsPsych.timelineVariable('dot_color'),
@@ -282,6 +291,7 @@
 
     /* intialize RDK for no_choice_block */
     var no_choice_block_rdk = {
+        data:{screen_id:"rdk_no_choice"},
         type: "rdk",
         dot_color: jsPsych.timelineVariable('dot_color'),
         choices: rdk_resp_keys,
@@ -313,6 +323,7 @@
 
     /* intialize RDK for choice_block */
     var choice_block_rdk = {
+        data:{screen_id:"rdk_choice"},
         type: "rdk",
         on_start: function(trial){
             trial.dot_color = outcomes[jsPsych.timelineVariable('choiceCongruent')][current_choice]
@@ -363,6 +374,7 @@
         ctxLevelM.stroke();
     }
     var level_bars = {
+        data:{screen_id:"level_bars"},
         type: 'canvas-keyboard-response',
         on_start: set_html_style,
         stimulus: drawLevelBars,
@@ -391,6 +403,7 @@
 
     /* initialize feedback */
     var feedback_screen = {
+        data:{screen_id:"feedback_practice"},
         type: 'html-keyboard-response',
         on_start: set_html_style,
         prompt: '<p style="color: black;font-size: 48px;">Press key C or M to start next trial</p>',
@@ -416,6 +429,7 @@
 
     /* initialize stim to display accuracy */
     var feedback_acc_practice = {
+        data:{screen_id:"feedback_acc_practice"},
         type: 'html-keyboard-response',
         on_start: set_html_style,
         stimulus: '<p styple="color: black;font-size: 100px;">To many incorrect response. <br>Repeat instructions and practice</p>',
@@ -425,6 +439,7 @@
 
     /*exp end prompt*/
     var thankyou = {
+    data:{screen_id:"end_thank_you"},
     type: 'html-keyboard-response',
     stimulus: '<p style="font-size: 48px;">THANK YOU</p>',
     choices: jsPsych.NO_KEYS,
@@ -433,6 +448,7 @@
 
     /*block break prompt*/
     var choice_block_interval = {
+    data:{screen_id:"break_choice_block"},
     type: 'html-keyboard-response',
     stimulus: '<p style="font-size: 48px;">BREAK. Press C or M to Proceed to next block.</p>',
     choices: ['c','m'],
@@ -520,9 +536,9 @@
                     type: 'fullscreen',
                     fullscreen_mode: true
                 }); */
-    //timeline.push(welcome);
+    timeline.push(welcome);
     //timeline.push(cm_resize);
-    timeline.push(validation_trial);
+    //timeline.push(validation_trial);
     timeline.push(loop_practice)
     timeline.push(instruction_no_choice)
     timeline.push(key_image_no_choice)
