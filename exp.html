@@ -557,6 +557,10 @@
 //------------INITIALIZE INIT-----------------------------------------------------
     jsPsych.init({
             timeline: timeline,
+            on_interaction_data_update: function(data){
+                var trial = jspsych.currentTrial();
+                trial.data.status_screen = data.event;
+            },
             //show_progress_bar: true,
             on_finish: function() {
                 jsPsych.data.displayData();
